@@ -1,5 +1,11 @@
--- So here's all the stuff to configure.
 
+-- Here's a few configurable things:
+
+-- Helmet-on-crouch config
+TICK_TIMEOUT = 40           -- How many ticks after a crouch should the counter reset
+CROUCH_AMOUNT = 2           -- How many crouches for it to toggle?
+
+-- Wingsuit Config:
 MAX_ARM_ROTATION = 80       -- What's the largest rotation
 MIN_ARM_ROTATION = 20       -- What's the smallest rotation
 ARM_CLIP_ANGLE = 70         -- When should the lower part disappear? It's the wrong way around, I know.
@@ -15,14 +21,35 @@ end
 
 
 
+-- Code for the helmet hiding
 
--- And heres the check that runs every tick!
+showingHead = true
+
+function crouchAction()
+    if showingHead then
+        log("§c Helmet disabled!")
+        showingHead = false
+        model.HEAD.HELMET.setEnabled(showingHead)
+    else
+        log("§a Helmet enabled!")
+        showingHead = true
+        model.HEAD.HELMET.setEnabled(showingHead)
+    end
+end
+
+
+-- Tick check
 
 lastPitch = 0
 targetPitch = 0
 
--- Used to get the pitch data and handle visibility
+ticksSinceCrouch = 0
+crouchCount = 0
+isCrouched = false
+
 function tick()
+
+    -- \/\/\/\/\/ WINGSUIT ANGLE CHECKING HERE \/\/\/\/\/
 
     -- If the player is flying, make the changes according to the player's pitch.
     if player.getAnimation() == "FALL_FLYING" then
@@ -40,7 +67,37 @@ function tick()
 
     end
 
+
+    -- \/\/\/\/\/ HELMET CROUCH CHECKING HERE \/\/\/\/\/
+
+    -- Check for a distinct crouch
+    if player.isSneaky() then
+        ticksSinceCrouch = 0 -- Reset tick counter as a crouch has occured.
+
+        if isCrouched == false then
+            crouchCount = crouchCount + 1 -- Increment number of crouches
+        end
+
+        isCrouched = true -- Set crouch state to true *after* the check
+    
+
+    else 
+        ticksSinceCrouch = ticksSinceCrouch + 1
+        isCrouched = false
+    end
+
+    if ticksSinceCrouch > TICK_TIMEOUT then
+        ticksSinceCrouch = 0
+        crouchCount = 0    -- Reset as it's past the timeout.
+    end
+
+
+    if crouchCount == CROUCH_AMOUNT then
+        crouchCount = 0 -- Crouch has happened! Start the action
+        crouchAction()
+    end
 end
+
 
 
 -- Used to actually update the positions.
@@ -88,5 +145,6 @@ function render(delta)
         model.RIGHT_ARM.setRot({0, 0, 0})
     end
 end
+
 
 
